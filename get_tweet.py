@@ -11,44 +11,65 @@ import json
 # prettier printing...
 from pprint import pprint
 
+# if this is the first time running the automation or
+# if there's an error, we will fall back on datetime
+from datetime import datetime
+
 # load env var
 load_dotenv()
 
-#LOOK INTO THIS!!!
-# https://docs.x.com/x-api/users/get-posts
-
 PROFILE_ID = {
    "berriefan":"1362687730631598080",
+   "trying_stuff": "1387796452152422400"
 }
 
-# OLDEST_CHECKED_TWT = 
+
+
+# get it at midnight so if it fails in the middle... we can consider that
+TODAYS_DATE = (datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat() + "Z")
 
 headers = {"Authorization": f"Bearer {os.getenv("TWT_KEY")}"}
 
 # call api -> parse request -> get needed data for each tweet from DATA ->
 # get media key for retweeted tweets -> replace media key with the actual image -> 
 # FINISH AND SEND!!!
+# using: https://docs.x.com/x-api/users/get-posts
 
 ############# LOOK BACK TO SEE WHAT YOU CAN PUT IN SMALLER FUNCTIONS!!!
 def get_post(user):
    # query using the start_id to get tweets after a certain date...
+   start_time = get_date(TODAYS_DATE)
 
    # change start time so we can convert it instead.. but lets see how it goes first
    params = {
-      "start_time": "2026-04-24T00:00:00Z",
+      "start_time": start_time,
       "tweet.fields": "attachments,created_at",
       "expansions": "article.cover_media,article.media_entities,attachments.media_keys,attachments.media_source_tweet,attachments.poll_ids,author_id,edit_history_tweet_ids,entities.mentions.username,geo.place_id,in_reply_to_user_id,entities.note.mentions.username,referenced_tweets.id,referenced_tweets.id.attachments.media_keys,referenced_tweets.id.author_id",
       "media.fields": "alt_text,duration_ms,height,media_key,non_public_metrics,organic_metrics,preview_image_url,promoted_metrics,public_metrics,type,url,variants,width",
    }
-   
-   url = f"https://api.x.com/2/users/{PROFILE_ID[user]}/tweets"
-   response = requests.get(url, headers=headers, params=params)
+
+   try:
+      url = f"https://api.x.com/2/users/{PROFILE_ID[user]}/tweets"
+      response = requests.get(url, headers=headers, params=params)
+      
+      # checking to make sure the request was successful
+      response.raise_for_status()
+   except requests.exceptions.RequestException as e:
+      pprint(f"ERROR FETCHING TWEETS: {e}")
+      return []
+
 
    tweet_data = response.json()
 
+   if tweet_data['meta']['result_count'] == 0:
+      pprint("no tweets fetched...")
+      return []
+
+   pprint(tweet_data)
+
+
    tweets = []
    rt_tweets = []
-
    # to get easy access to the tweets that are retweeted
    rt_ids = []
 
@@ -106,9 +127,12 @@ def get_post(user):
 
    # matching the media_key to the url for easier access woohoo
    ## Could make it into it's own function: media_keys_to_images_dict
-   media_keys_to_images = {}
-   for images in tweet_data['includes']['media']:
-      media_keys_to_images[images['media_key']] = images['url']
+   try:
+      media_keys_to_images = {}
+      for images in tweet_data['includes']['media']:
+         media_keys_to_images[images['media_key']] = images['url']
+   except (KeyError, TypeError) as e:
+      pprint(f"Tweet has no media OR issue with getting media keys: {e}")
       
    # replacing the keys with the urls
    ## Could Make Into It's Own Function: replace_key_with_url
@@ -119,13 +143,39 @@ def get_post(user):
             urls_for_key.append(media_keys_to_images[key])
       twt['attachments'] = urls_for_key
 
-   pprint(tweets)
-   return tweets
+   # getting last seen twt date
+   newest_twt_id = tweet_data['meta']['newest_id']
+   newest_twt_date = ""
 
+   for twt in tweets:
+      if twt['id'] == newest_twt_id:
+         newest_twt_date = twt['date_created']
+         break
+   
+   save_date(newest_twt_date)
+   return tweets
 
 ####### SAVING DATA AND STUFF...
 
-# # saving the tweet into a json! so that we can check if 
+# get the date of the last tweet, and if the json doesn't exist, then make it!
+def get_date(todays_date):
+   try:
+      with open("date.json", 'r') as f:
+         data = json.load(f)
+   except:
+      data = {"last_twt_date" : todays_date}
+      with open('date.json', 'w') as f:
+         json.dump(data,f)
+
+   pprint(data)
+   return data['last_twt_date']
+
+def save_date(twt_date):
+   data = {"last_twt_date" : twt_date}
+   with open('date.json', 'w') as f:
+      json.dump(data, f)
+
+# # saving the tweets into a json! so that we can check if 
 # def save_last_seen_twt(twt_id, twt_txt, date):
 #    twt_data = {
 #       "twt_id": twt_id,
@@ -142,4 +192,4 @@ def get_post(user):
 #          db_file.write(json.dumps({}))
 
 ## TESTING
-get_post("berriefan")
+get_post("trying_stuff")
