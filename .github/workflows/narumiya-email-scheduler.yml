@@ -1,0 +1,31 @@
+name: Narumiya Email Scheduler
+run-name: Poll for tweets and send email to designated email address
+on:
+   schedule:
+      - cron: "0 * * * *"
+
+jobs:
+   narumiya_email_scheduler:
+      runs-on: ubuntu-latest
+
+      steps:
+         - name: clone repo for runner
+           uses: actions/checkout@v6
+
+         - name: set up python
+           uses: actions/setup-python@v6
+           with:
+              python-version: "3.13"
+              cache: "pip"
+
+         - name: install dependencies
+           run: pip install -r requirements.txt
+
+         - name: run narumiya_emailer.py
+           env:
+              RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+              SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+              SENDER_PASS: ${{ secrets.SENDER_PASS }}
+              TWT_KEY: ${{ secrets.TWT_KEY }}
+              DEEPL_KEY: ${{ secrets.DEEPL_KEY }}
+           run: py narumiya_emailer.py
