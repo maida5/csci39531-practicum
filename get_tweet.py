@@ -50,7 +50,7 @@ def get_post(user):
 
    try:
       url = f"https://api.x.com/2/users/{PROFILE_ID[user]}/tweets"
-      response = requests.get(url, headers=headers, params=params)
+      response = requests.get(url, headers=headers, params=params, timeout=10)
       
       # checking to make sure the request was successful
       response.raise_for_status()
