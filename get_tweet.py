@@ -23,8 +23,6 @@ PROFILE_ID = {
    "trying_stuff": "1387796452152422400"
 }
 
-
-
 # get it at midnight so if it fails in the middle... we can consider that
 TODAYS_DATE = (datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat() + "Z")
 
@@ -34,10 +32,6 @@ headers = {"Authorization": f"Bearer {os.getenv("TWT_KEY")}"}
 # get media key for retweeted tweets -> replace media key with the actual image -> 
 # FINISH AND SEND!!!
 # using: https://docs.x.com/x-api/users/get-posts
-
-def get_post(user):
-   data = query_api(user)
-   return clean_data(data)
 
 ############# LOOK BACK TO SEE WHAT YOU CAN PUT IN SMALLER FUNCTIONS!!!
 def query_api(user):
@@ -119,7 +113,7 @@ def clean_data(tweet_data):
       else:
          tweets.append(new_post)
 
-   pprint(tweet_data)
+   # pprint(tweet_data)
 
    # this is a long and probably roundabout way to find the media attachment
    # of retweets without having to call the API again...
@@ -157,7 +151,7 @@ def clean_data(tweet_data):
                urls_for_key.append(media_keys_to_images[key])
             except Exception as e:
 
-               twt['text'] = twt['text'] + "\nMEDIA FOUND BUT NOT ATTACHED TO EMAIL"
+               twt['text'] = twt['text'] + "\nMEDIA FOUND BUT NOT EMAILED AS ATTACHMENT"
                print(f"key not found: {e}")
       twt['attachments'] = urls_for_key
 
@@ -178,35 +172,5 @@ def get_date(todays_date):
    # pprint(data)
    return data['last_twt_date']
 
-def save_date(tweet_data, tweets):
-   # getting last seen twt date
-   newest_twt_id = tweet_data['meta']['newest_id']
-   newest_twt_date = ""
-
-   for twt in tweets:
-      if twt['id'] == newest_twt_id:
-         newest_twt_date = twt['date_created']
-         break
-
-   data = {"last_twt_date" : newest_twt_date}
-   with open('date.json', 'w') as f:
-      json.dump(data, f)
-
-# # saving the tweets into a json! so that we can check if 
-# def save_last_seen_twt(twt_id, twt_txt, date):
-#    twt_data = {
-#       "twt_id": twt_id,
-#       "date_made": date,
-#       "twt_txt": twt_txt 
-#    }
-
-#    if os.path.isfile(PATH) and os.access(PATH, os.R_OK):
-#         # checks if file exists
-#         print ("File exists and is readable")
-#    else:
-#       print ("Either file is missing or is not readable, creating file...")
-#       with io.open(os.path.join(PATH, 'seen_twt.json'), 'w') as db_file:
-#          db_file.write(json.dumps({}))
-
 ## TESTING
-get_post("trying_stuff")
+# get_post("trying_stuff")
