@@ -50,7 +50,7 @@ def send_email(subject, content, link, photo_attachments):
    try:
       # i got this from the lecture! but many sources online use another port. we can investigate. later...
       with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-         smtp.login(os.getenv("SENDER_EMAIL"), os.getenv("SENDER_P"))
+         smtp.login(os.getenv("SENDER_EMAIL"), os.getenv("SENDER_APP_PASS"))
          smtp.send_message(msg)
          print("msg sent!")
    except Exception as e:

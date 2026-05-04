@@ -65,7 +65,7 @@ def get_post(user):
       pprint("no tweets fetched...")
       return []
 
-   pprint(tweet_data)
+   # pprint(tweet_data)
 
 
    tweets = []
@@ -167,7 +167,7 @@ def get_date(todays_date):
       with open('date.json', 'w') as f:
          json.dump(data,f)
 
-   pprint(data)
+   # pprint(data)
    return data['last_twt_date']
 
 def save_date(twt_date):

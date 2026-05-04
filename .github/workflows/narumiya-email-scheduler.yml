@@ -28,4 +28,4 @@ jobs:
               SENDER_P: ${{ secrets.SENDER_P }}
               TWT_KEY: ${{ secrets.TWT_KEY }}
               DEEPL_KEY: ${{ secrets.DEEPL_KEY }}
-           run: py narumiya_emailer.py
+           run: python narumiya_emailer.py
