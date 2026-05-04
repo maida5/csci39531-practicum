@@ -35,8 +35,12 @@ headers = {"Authorization": f"Bearer {os.getenv("TWT_KEY")}"}
 # FINISH AND SEND!!!
 # using: https://docs.x.com/x-api/users/get-posts
 
-############# LOOK BACK TO SEE WHAT YOU CAN PUT IN SMALLER FUNCTIONS!!!
 def get_post(user):
+   data = query_api(user)
+   return clean_data(data)
+
+############# LOOK BACK TO SEE WHAT YOU CAN PUT IN SMALLER FUNCTIONS!!!
+def query_api(user):
    # query using the start_id to get tweets after a certain date...
    start_time = get_date(TODAYS_DATE)
 
@@ -60,7 +64,9 @@ def get_post(user):
 
 
    tweet_data = response.json()
+   return tweet_data
 
+def clean_data(tweet_data):
    if tweet_data['meta']['result_count'] == 0:
       pprint("no tweets fetched...")
       return []
@@ -113,6 +119,8 @@ def get_post(user):
       else:
          tweets.append(new_post)
 
+   pprint(tweet_data)
+
    # this is a long and probably roundabout way to find the media attachment
    # of retweets without having to call the API again...
    ## Could Put In Its Own Function: Replace RT Attachments with Keys
@@ -130,7 +138,12 @@ def get_post(user):
    try:
       media_keys_to_images = {}
       for images in tweet_data['includes']['media']:
-         media_keys_to_images[images['media_key']] = images['url']
+
+         # this satisifies the use case of potential gifs, videos just link to the tweet
+         if images['type'] != 'animated_gif':
+            media_keys_to_images[images['media_key']] = images['url']
+         else:
+            media_keys_to_images[images['media_key']] = images['preview_image_url']
    except (KeyError, TypeError) as e:
       pprint(f"Tweet has no media OR issue with getting media keys: {e}")
       
@@ -140,19 +153,14 @@ def get_post(user):
       urls_for_key = []
       if twt['attachments']:
          for key in twt['attachments']:
-            urls_for_key.append(media_keys_to_images[key])
+            try:
+               urls_for_key.append(media_keys_to_images[key])
+            except Exception as e:
+
+               twt['text'] = twt['text'] + "\nMEDIA FOUND BUT NOT ATTACHED TO EMAIL"
+               print(f"key not found: {e}")
       twt['attachments'] = urls_for_key
 
-   # getting last seen twt date
-   newest_twt_id = tweet_data['meta']['newest_id']
-   newest_twt_date = ""
-
-   for twt in tweets:
-      if twt['id'] == newest_twt_id:
-         newest_twt_date = twt['date_created']
-         break
-   
-   save_date(newest_twt_date)
    return tweets
 
 ####### SAVING DATA AND STUFF...
@@ -170,8 +178,17 @@ def get_date(todays_date):
    # pprint(data)
    return data['last_twt_date']
 
-def save_date(twt_date):
-   data = {"last_twt_date" : twt_date}
+def save_date(tweet_data, tweets):
+   # getting last seen twt date
+   newest_twt_id = tweet_data['meta']['newest_id']
+   newest_twt_date = ""
+
+   for twt in tweets:
+      if twt['id'] == newest_twt_id:
+         newest_twt_date = twt['date_created']
+         break
+
+   data = {"last_twt_date" : newest_twt_date}
    with open('date.json', 'w') as f:
       json.dump(data, f)
 

@@ -1,7 +1,15 @@
-from get_tweet import get_post
+from get_tweet import query_api, clean_data
+from saving_data import save_date
 from send_email import send_email
 from translation import translate
 from announcement_type import find_announcement_type
+
+import logging
+logging.basicConfig(
+    filename="logs/emailer.log",
+    level=logging.INFO,
+    format="%(asctime)s %(message)s"
+)
 
 authors = [
    "berriefan",
@@ -15,8 +23,12 @@ temp = [
 
 def narumiya_emailer():
    # go through each author
+   logging.info("--- run started ---")
+
    for author in authors:
-      tweets = get_post(author) # get their posts
+      uncleaned_data = query_api(author) # get their posts
+      tweets = clean_data(uncleaned_data)
+      logging.info(f"{author}: {len(tweets)} new tweets")
 
       # go through each post individually to email them individually
       for tweet in tweets:
@@ -27,6 +39,7 @@ def narumiya_emailer():
 
          try:
             send_email(email_subject, translated_tweet, "", tweet['attachments'])
+            save_date(uncleaned_data, tweets)
          except Exception as e:
             print(f"failed to send email: {e}")
 
