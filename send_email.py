@@ -7,6 +7,9 @@ from dotenv import load_dotenv
 
 import requests
 
+import logging
+logger = logging.getLogger(__name__)
+
 # load env var
 load_dotenv()
 
@@ -41,7 +44,7 @@ def send_email(subject, content, link, photo_attachments):
             msg.add_attachment(img_data, maintype=maintype, subtype=subtype)
       except Exception as e:
          failed_images+=1
-         print(f"Error attaching image: {e}")
+         logging.error(f"Error attaching image: {e}")
 
    # let me know if there are any fail images in the email itself! wow
    if failed_images:
@@ -52,9 +55,11 @@ def send_email(subject, content, link, photo_attachments):
       with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
          smtp.login(os.getenv("SENDER_EMAIL"), os.getenv("SENDER_APP_PASS"))
          smtp.send_message(msg)
-         print("msg sent!")
+         logging.info("msg sent!")
+      return True
    except Exception as e:
-      print(f"message failed...: {e}")
+      logging.error(f"message failed...: {e}")
+      raise Exception(e)
    
    
 # # TESTING

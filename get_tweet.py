@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 # json to save the twt data
 import json
+import logging
 
 # prettier printing...
 from pprint import pprint
@@ -20,7 +21,9 @@ load_dotenv()
 
 PROFILE_ID = {
    "berriefan":"1362687730631598080",
-   "trying_stuff": "1387796452152422400"
+   "trying_stuff": "1387796452152422400",
+   "nakamurakunfan": "1715272719854718976",
+   "pomponette_MINT":"1785532875225616384"
 }
 
 # get it at midnight so if it fails in the middle... we can consider that
@@ -28,15 +31,19 @@ TODAYS_DATE = (datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
 headers = {"Authorization": f"Bearer {os.getenv("TWT_KEY")}"}
 
+logger = logging.getLogger(__name__)
+
+
 # call api -> parse request -> get needed data for each tweet from DATA ->
 # get media key for retweeted tweets -> replace media key with the actual image -> 
 # FINISH AND SEND!!!
 # using: https://docs.x.com/x-api/users/get-posts
-
-############# LOOK BACK TO SEE WHAT YOU CAN PUT IN SMALLER FUNCTIONS!!!
 def query_api(user):
+   logging.info(f"--- GETTING TWT DATA FOR {user} ---")
+
    # query using the start_id to get tweets after a certain date...
    start_time = get_date(TODAYS_DATE)
+   logging.info(f"getting tweets from: {start_time}")
 
    # change start time so we can convert it instead.. but lets see how it goes first
    params = {
@@ -52,21 +59,21 @@ def query_api(user):
       
       # checking to make sure the request was successful
       response.raise_for_status()
+      logging.info(f"SUCCESSFULLY OBTAINED TWEETS")
    except requests.exceptions.RequestException as e:
-      pprint(f"ERROR FETCHING TWEETS: {e}")
-      return []
-
+      logging.error(f"ERROR FETCHING TWEETS: {e}")
+      raise Exception(e)
 
    tweet_data = response.json()
    return tweet_data
 
 def clean_data(tweet_data):
+   logging.info("- STARTING TO CLEAN DATA - ")
    if tweet_data['meta']['result_count'] == 0:
-      pprint("no tweets fetched...")
+      logging.warning(f"no tweets fetched...")
       return []
 
    # pprint(tweet_data)
-
 
    tweets = []
    rt_tweets = []
@@ -76,8 +83,6 @@ def clean_data(tweet_data):
    # # parsing through just the data to get each post separate!
    # i separate the rt and authored tweets so i can get the media
    # for the rt tweets and add them...
-
-   # could put this in it's own function: create list of tweets
    for post in tweet_data['data']:
       id = post['id']
       text = post['text']
@@ -113,11 +118,8 @@ def clean_data(tweet_data):
       else:
          tweets.append(new_post)
 
-   # pprint(tweet_data)
-
    # this is a long and probably roundabout way to find the media attachment
    # of retweets without having to call the API again...
-   ## Could Put In Its Own Function: Replace RT Attachments with Keys
    for post in tweet_data['includes']['tweets']:
       if post['id'] in rt_ids:
          for rt_post in rt_tweets:
@@ -128,7 +130,6 @@ def clean_data(tweet_data):
    tweets.extend(rt_tweets)
 
    # matching the media_key to the url for easier access woohoo
-   ## Could make it into it's own function: media_keys_to_images_dict
    try:
       media_keys_to_images = {}
       for images in tweet_data['includes']['media']:
@@ -139,10 +140,9 @@ def clean_data(tweet_data):
          else:
             media_keys_to_images[images['media_key']] = images['preview_image_url']
    except (KeyError, TypeError) as e:
-      pprint(f"Tweet has no media OR issue with getting media keys: {e}")
+      logging.warning(f"Tweet has no media OR issue with getting media keys: {e}")
       
    # replacing the keys with the urls
-   ## Could Make Into It's Own Function: replace_key_with_url
    for twt in tweets:
       urls_for_key = []
       if twt['attachments']:
@@ -152,12 +152,10 @@ def clean_data(tweet_data):
             except Exception as e:
 
                twt['text'] = twt['text'] + "\nMEDIA FOUND BUT NOT EMAILED AS ATTACHMENT"
-               print(f"key not found: {e}")
+               logging.warning(f"key not found: {e}")
       twt['attachments'] = urls_for_key
 
    return tweets
-
-####### SAVING DATA AND STUFF...
 
 # get the date of the last tweet, and if the json doesn't exist, then make it!
 def get_date(todays_date):
@@ -169,7 +167,6 @@ def get_date(todays_date):
       with open('date.json', 'w') as f:
          json.dump(data,f)
 
-   # pprint(data)
    return data['last_twt_date']
 
 ## TESTING

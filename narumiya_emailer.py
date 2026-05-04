@@ -5,37 +5,51 @@ from translation import translate
 from announcement_type import find_announcement_type
 
 import logging
+import json
 logging.basicConfig(
     filename="logs/emailer.log",
     level=logging.INFO,
-    format="%(asctime)s %(message)s"
+    format="%(asctime)s %(levelname)s %(message)s"
 )
 
 authors = [
    "berriefan",
-   "trying_stuff"
-]
-
-temp = [   
+   "trying_stuff",
    "nakamurakunfan",
    "pomponette_MINT"
 ]
 
 def narumiya_emailer():
    # go through each author
-   logging.info("--- run started ---")
+   logging.info("--- STARTING PROCESS ---")
 
    for author in authors:
-      uncleaned_data = query_api(author) # get their posts
+      logging.info(f"--- {author.upper()} ---")
+
+      # attempting to get api data, retrying if fails
+      attempts = 0
+      for attempts in range(3):
+         try: 
+            uncleaned_data = query_api(author) # get their posts
+            break
+         except Exception as e:
+            logging.error(f"{attempts+1} ATTEMPT. ERROR GETTING TWT DATA: {e}. RETRYING...")
+
+      # if failed 3 times, 
+      if attempts == 2:
+         logging.error("FAILED TO GET TWT DATA")
+         break
+
       tweets = clean_data(uncleaned_data)
       logging.info(f"{author}: {len(tweets)} new tweets")
 
-      # print(tweets)
-      # ### logic to removing repeated twts
+      # removing repeated tweets
       tweets = remove_repeated_data(tweets)
-      
-      # print(tweets)
 
+      if tweets == []:
+         logging.info(f"no new tweets from {author}, skipping...")
+         continue
+  
       # twts that are successfully emailed to update json
       successfully_sent_twts = []
 
@@ -44,14 +58,32 @@ def narumiya_emailer():
          # find announcement type to append it to subject line
          email_subject = find_announcement_type(tweet) + f"NEW POST BY {author}"
 
-         translated_tweet = translate(tweet['text'])
+         attempts = 0
+         for attempts in range(3):
+            try:
+               translated_tweet = translate(tweet['text'])
+               break
+            except Exception as e:
+               logging.error(f"{attempts+1} ATTEMPT. ERROR TRANSLATING: {e}. RETRYING...")
 
-         try:
-            send_email(email_subject, translated_tweet, "", tweet['attachments'])
-            save_date(uncleaned_data, tweets)
-            successfully_sent_twts.append(tweet)
-         except Exception as e:
-            print(f"failed to send email: {e}")
+         # even if translation fails, still send the text...
+         if attempts == 2:
+            logging.error(f"FAILED TO TRANSLATE TWT WITH ID: {tweet["id"]}")
+            translated_tweet = tweet['id']
+               
+         attempts = 0
+         for attempts in range(3):
+            try:
+               send_email(email_subject, translated_tweet, "", tweet['attachments'])
+               save_date(uncleaned_data, tweets)
+               successfully_sent_twts.append(tweet)
+               break
+            except Exception as e:
+               logging.error(f"{attempts+1} ATTEMPT. failed to send email: {e}. RETRYING...")
+
+         if attempts == 2:
+            logging.error(f"FAILED TO SEND EMAIL FOR TWT WITH ID: {tweet["id"]}")
+            break
 
       # saving posts if emailed successfully
       save_posts(successfully_sent_twts)
