@@ -15,6 +15,7 @@ logging.basicConfig(
 authors = [
    "berriefan",
    "trying_stuff",
+   "trying_stuff2",
    "nakamurakunfan",
    "pomponette_MINT"
 ]
@@ -35,9 +36,10 @@ def narumiya_emailer():
          except Exception as e:
             logging.error(f"{attempts+1} ATTEMPT. ERROR GETTING TWT DATA: {e}. RETRYING...")
 
-      # if failed 3 times, 
+      # if failed 3 times, just break out the loop since we can't get twt data
       if attempts == 2:
          logging.error("FAILED TO GET TWT DATA")
+         send_email("Automation Failed", "FAILED TO GET TWT DATA, check Twitter API/Logs", "", [])
          break
 
       tweets = clean_data(uncleaned_data)

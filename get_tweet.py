@@ -22,6 +22,7 @@ load_dotenv()
 PROFILE_ID = {
    "berriefan":"1362687730631598080",
    "trying_stuff": "1387796452152422400",
+   "trying_stuff2": "1128022061954289664",
    "nakamurakunfan": "1715272719854718976",
    "pomponette_MINT":"1785532875225616384"
 }
@@ -72,8 +73,6 @@ def clean_data(tweet_data):
    if tweet_data['meta']['result_count'] == 0:
       logging.warning(f"no tweets fetched...")
       return []
-
-   # pprint(tweet_data)
 
    tweets = []
    rt_tweets = []
@@ -170,4 +169,5 @@ def get_date(todays_date):
    return data['last_twt_date']
 
 ## TESTING
-# get_post("trying_stuff")
+# twt = query_api("trying_stuff")
+# clean_data(twt)
